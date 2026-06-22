@@ -1,5 +1,5 @@
 
-const Footer = () => {
+export const Footer = () => {
   return (
     <footer className="w-full bg-[#1c1c1e] text-gray-400 px-6 py-12 md:px-16 md:py-20 mt-16">
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-12 gap-8 md:gap-12">
@@ -19,9 +19,9 @@ const Footer = () => {
         <div className="md:col-span-3 space-y-4 text-xs">
           <h4 className="text-white uppercase font-semibold tracking-wider">Quick Links</h4>
           <ul className="space-y-2.5">
-            <li><a href="#shop" className="hover:text-white transition-colors">Shop All</a></li>
-            <li><a href="#arrivals" className="hover:text-white transition-colors">New Arrivals</a></li>
-            <li><a href="#gifts" className="hover:text-white transition-colors">Gift Cards</a></li>
+            <li><a href="/products" className="hover:text-white transition-colors">Shop All</a></li>
+            <li><a href="/products" className="hover:text-white transition-colors">New Arrivals</a></li>
+            <li><a href="/cart" className="hover:text-white transition-colors">Gift Cards</a></li>
           </ul>
         </div>
 
@@ -29,9 +29,9 @@ const Footer = () => {
         <div className="md:col-span-3 space-y-4 text-xs">
           <h4 className="text-white uppercase font-semibold tracking-wider">Customer Service</h4>
           <ul className="space-y-2.5">
-            <li><a href="#contact" className="hover:text-white transition-colors">Contact Us</a></li>
-            <li><a href="#refund" className="hover:text-white transition-colors">Refund Policy</a></li>
-            <li><a href="#shipping" className="hover:text-white transition-colors">Shipping</a></li>
+            <li><a href="*" className="hover:text-white transition-colors">Contact Us</a></li>
+            <li><a href="*" className="hover:text-white transition-colors">Refund Policy</a></li>
+            <li><a href="*" className="hover:text-white transition-colors">Shipping</a></li>
           </ul>
         </div>
       </div>
