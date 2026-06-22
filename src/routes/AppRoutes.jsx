@@ -15,11 +15,11 @@ export const AppRoutes = () => {
             <Route path="/" element={<Home/>} />
             <Route path="/cart" element={<Cart/>} />
             <Route path="/products" element={<Products/>} />
+            <Route path="/products/:id" element={<ProductDetails />} />
             <Route path="/profile" element={<Profile/>} />
 
 
         </Route>
-        <Route path='/products/:id' element={<ProductDetails />}></Route>
         <Route path='*' element={<NotFound />}/>
     </Routes>
   )
