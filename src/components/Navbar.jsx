@@ -1,8 +1,16 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 
 export const Navbar = () => {
   const { cartCount } = useCart();
+  const { isAuthenticated, user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
 
   return (
     <nav className="flex justify-between items-center py-4 px-15 shadow-sm">
@@ -22,8 +30,31 @@ export const Navbar = () => {
         </Link>
       </div>
 
-      <div className="font-sans bg-black text-white text-sm font-medium px-8 py-3 rounded-full hover:bg-gray-800 transition-colors">
-        <Link to="/profile">Profile</Link>
+      <div className="flex items-center gap-3">
+        {isAuthenticated ? (
+          <>
+            <Link
+              to="/profile"
+              className="font-sans border border-gray-400 text-black text-sm font-medium px-6 py-3 rounded-full hover:bg-gray-50 transition-colors"
+            >
+              {user?.firstName || "Profile"}
+            </Link>
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="font-sans bg-black text-white text-sm font-medium px-6 py-3 rounded-full hover:bg-gray-800 transition-colors"
+            >
+              Logout
+            </button>
+          </>
+        ) : (
+          <Link
+            to="/login"
+            className="font-sans bg-black text-white text-sm font-medium px-8 py-3 rounded-full hover:bg-gray-800 transition-colors"
+          >
+            Login
+          </Link>
+        )}
       </div>
 
     </nav>
@@ -31,5 +62,3 @@ export const Navbar = () => {
 };
 
 export default Navbar;
-
-// className="border border-gray-400 text-black text-sm font-medium px-8 py-3 rounded-full hover:bg-gray-50 transition-colors"
