@@ -1,10 +1,29 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { formatPrice } from "../utils/formatPrice";
+import { checkout } from "../services/orders";
 
 export const Cart = () => {
-  const { items, cartTotal, updateQuantity, removeFromCart, clearCart } =
+  const { items, cartTotal, updateQuantity, removeFromCart, clearCart, refreshCart } =
     useCart();
+  const navigate = useNavigate();
+  const [checkingOut, setCheckingOut] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleCheckout = async () => {
+    setError("");
+    setCheckingOut(true);
+    try {
+      await checkout();
+      await refreshCart();
+      navigate("/profile");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setCheckingOut(false);
+    }
+  };
 
   if (items.length === 0) {
     return (
@@ -29,7 +48,7 @@ export const Cart = () => {
         <h1 className="text-3xl font-serif text-gray-900">Shopping Cart</h1>
         <button
           type="button"
-          onClick={clearCart}
+          onClick={() => clearCart()}
           className="text-sm text-gray-500 hover:text-gray-900 underline underline-offset-4"
         >
           Clear cart
@@ -48,7 +67,7 @@ export const Cart = () => {
               className="w-20 h-20 md:w-24 md:h-24 object-cover rounded-xl shrink-0"
             />
 
-            <div className="flex-grow min-w-0 space-y-1">
+            <div className="grow min-w-0 space-y-1">
               <Link
                 to={`/products/${item.id}`}
                 className="text-lg font-medium text-gray-900 hover:underline truncate block"
@@ -94,6 +113,20 @@ export const Cart = () => {
         ))}
       </div>
 
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 px-4 py-3 rounded-xl">
+          {error}
+          {error.includes("shipping address") && (
+            <>
+              {" "}
+              <Link to="/profile" className="underline font-medium">
+                Update profile
+              </Link>
+            </>
+          )}
+        </p>
+      )}
+
       <div className="border-t border-gray-200 pt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <p className="text-sm text-gray-500 uppercase tracking-wider">Total</p>
@@ -103,9 +136,11 @@ export const Cart = () => {
         </div>
         <button
           type="button"
-          className="bg-black text-white text-sm font-medium px-8 py-3 rounded-full hover:bg-gray-800 transition-colors"
+          onClick={handleCheckout}
+          disabled={checkingOut}
+          className="bg-black text-white text-sm font-medium px-8 py-3 rounded-full hover:bg-gray-800 transition-colors disabled:opacity-60"
         >
-          Checkout
+          {checkingOut ? "Processing..." : "Checkout"}
         </button>
       </div>
     </div>

@@ -1,61 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import { formatPrice } from "../utils/formatPrice";
-
-const PROFILE_STORAGE_KEY = "techkraft-profile";
-
-const defaultProfile = {
-  firstName: "Arjun",
-  lastName: "Mehta",
-  email: "arjun.mehta@email.com",
-  phone: "+91 98765 43210",
-  address: "42 Tech Park Road",
-  city: "Bangalore",
-  state: "Karnataka",
-  pincode: "560001",
-};
-
-const orders = [
-  {
-    id: "TK-2026-1042",
-    date: "12 Jun 2026",
-    status: "Delivered",
-    total: 18498,
-    items: [
-      { name: "Noise Cancelling Headphones", qty: 1 },
-      { name: "Wireless Mouse", qty: 1 },
-    ],
-  },
-  {
-    id: "TK-2026-0987",
-    date: "28 May 2026",
-    status: "Shipped",
-    total: 5999,
-    items: [{ name: "Smart Watch", qty: 1 }],
-  },
-  {
-    id: "TK-2026-0811",
-    date: "3 May 2026",
-    status: "Delivered",
-    total: 4500,
-    items: [{ name: "Mechanical Keyboard", qty: 1 }],
-  },
-];
+import { getOrders } from "../services/orders";
 
 const statusStyles = {
   Delivered: "bg-green-100 text-green-800",
   Shipped: "bg-blue-100 text-blue-800",
   Processing: "bg-amber-100 text-amber-800",
-};
-
-const loadProfile = () => {
-  try {
-    const stored = localStorage.getItem(PROFILE_STORAGE_KEY);
-    return stored ? { ...defaultProfile, ...JSON.parse(stored) } : defaultProfile;
-  } catch {
-    return defaultProfile;
-  }
 };
 
 const ProfileField = ({ label, id, value, onChange, type = "text", disabled }) => (
@@ -76,51 +29,83 @@ const ProfileField = ({ label, id, value, onChange, type = "text", disabled }) =
 
 export const Profile = () => {
   const { cartCount, cartTotal } = useCart();
-  const [profile, setProfile] = useState(loadProfile);
+  const { user, updateProfile } = useAuth();
+  const [profile, setProfile] = useState(user);
+  const [orders, setOrders] = useState([]);
   const [isEditing, setIsEditing] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-  }, [profile]);
+    if (user) setProfile(user);
+  }, [user]);
 
-  const fullName = `${profile.firstName} ${profile.lastName}`;
-  const initials = `${profile.firstName[0]}${profile.lastName[0]}`.toUpperCase();
+  useEffect(() => {
+    getOrders()
+      .then(setOrders)
+      .catch(() => setOrders([]));
+  }, []);
+
+  const fullName = `${profile?.firstName || ""} ${profile?.lastName || ""}`.trim();
+  const initials = `${profile?.firstName?.[0] || ""}${profile?.lastName?.[0] || ""}`.toUpperCase();
+
+  const memberSince = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString("en-IN", {
+        month: "long",
+        year: "numeric",
+      })
+    : "Recently";
 
   const handleChange = (field) => (e) => {
     setProfile((prev) => ({ ...prev, [field]: e.target.value }));
     setSaved(false);
   };
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    setIsEditing(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+    setError("");
+    try {
+      await updateProfile({
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        phone: profile.phone,
+        address: profile.address,
+        city: profile.city,
+        state: profile.state,
+        pincode: profile.pincode,
+      });
+      setIsEditing(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleCancel = () => {
-    setProfile(loadProfile());
+    setProfile(user);
     setIsEditing(false);
     setSaved(false);
+    setError("");
   };
+
+  if (!profile) return null;
 
   return (
     <div className="max-w-5xl mx-auto px-6 md:px-12 pb-8 space-y-10 md:space-y-12">
-      {/* Header */}
       <section className="bg-[#f4f4f6] rounded-2xl md:rounded-3xl px-6 py-10 md:px-12 md:py-12">
         <div className="flex flex-col md:flex-row md:items-center gap-6 md:gap-8">
           <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-black text-white flex items-center justify-center text-2xl md:text-3xl font-serif shrink-0">
             {initials}
           </div>
 
-          <div className="flex-grow space-y-2">
+          <div className="grow space-y-2">
             <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
               My Account
             </p>
             <h1 className="text-3xl md:text-4xl font-serif text-gray-900">{fullName}</h1>
             <p className="text-sm text-gray-600">{profile.email}</p>
-            <p className="text-xs text-gray-500">Member since January 2026</p>
+            <p className="text-xs text-gray-500">Member since {memberSince}</p>
           </div>
 
           {!isEditing && (
@@ -135,7 +120,6 @@ export const Profile = () => {
         </div>
       </section>
 
-      {/* Quick stats */}
       <section className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
         {[
           { label: "Cart items", value: cartCount },
@@ -156,7 +140,6 @@ export const Profile = () => {
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 md:gap-10">
-        {/* Personal info */}
         <section className="lg:col-span-3 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-serif text-gray-900">Personal information</h2>
@@ -166,6 +149,10 @@ export const Profile = () => {
               </span>
             )}
           </div>
+
+          {error && (
+            <p className="text-sm text-red-600 bg-red-50 px-4 py-2 rounded-xl">{error}</p>
+          )}
 
           <form
             onSubmit={handleSave}
@@ -194,7 +181,7 @@ export const Profile = () => {
               type="email"
               value={profile.email}
               onChange={handleChange("email")}
-              disabled={!isEditing}
+              disabled
             />
 
             <ProfileField
@@ -264,7 +251,6 @@ export const Profile = () => {
           </form>
         </section>
 
-        {/* Sidebar */}
         <aside className="lg:col-span-2 space-y-6">
           <div className="space-y-4">
             <h2 className="text-2xl font-serif text-gray-900">Quick actions</h2>
@@ -291,36 +277,9 @@ export const Profile = () => {
               ))}
             </div>
           </div>
-
-          <div className="space-y-4">
-            <h2 className="text-2xl font-serif text-gray-900">Preferences</h2>
-            <div className="bg-[#f4f4f6] rounded-2xl md:rounded-3xl p-6 space-y-4">
-              {[
-                { label: "Order updates", description: "Email when your order ships" },
-                { label: "Promotions", description: "Deals and new arrivals" },
-                { label: "Newsletter", description: "Weekly tech picks" },
-              ].map((pref) => (
-                <label
-                  key={pref.label}
-                  className="flex items-start justify-between gap-4 cursor-pointer"
-                >
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{pref.label}</p>
-                    <p className="text-xs text-gray-500 mt-0.5">{pref.description}</p>
-                  </div>
-                  <input
-                    type="checkbox"
-                    defaultChecked={pref.label !== "Promotions"}
-                    className="mt-1 w-4 h-4 rounded border-gray-300 accent-black shrink-0"
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
         </aside>
       </div>
 
-      {/* Order history */}
       <section className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
           <div className="space-y-2">
@@ -337,43 +296,41 @@ export const Profile = () => {
           </Link>
         </div>
 
-        <div className="space-y-4">
-          {orders.map((order) => (
-            <article
-              key={order.id}
-              className="bg-[#f4f4f6] rounded-2xl md:rounded-3xl p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
-            >
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-3">
-                  <p className="text-sm font-semibold text-gray-900">{order.id}</p>
-                  <span
-                    className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${
-                      statusStyles[order.status] ?? "bg-gray-100 text-gray-700"
-                    }`}
-                  >
-                    {order.status}
-                  </span>
+        {orders.length === 0 ? (
+          <p className="text-gray-500 text-sm">No orders yet. Checkout from your cart to place one.</p>
+        ) : (
+          <div className="space-y-4">
+            {orders.map((order) => (
+              <article
+                key={order.id}
+                className="bg-[#f4f4f6] rounded-2xl md:rounded-3xl p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+              >
+                <div className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <p className="text-sm font-semibold text-gray-900">{order.orderNumber}</p>
+                    <span
+                      className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full ${
+                        statusStyles[order.status] ?? "bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      {order.status}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">{order.date}</p>
+                  <p className="text-sm text-gray-600">
+                    {order.items.map((item) => `${item.name} × ${item.qty}`).join(", ")}
+                  </p>
                 </div>
-                <p className="text-xs text-gray-500">{order.date}</p>
-                <p className="text-sm text-gray-600">
-                  {order.items.map((item) => `${item.name} × ${item.qty}`).join(", ")}
-                </p>
-              </div>
 
-              <div className="flex items-center gap-6 shrink-0">
-                <p className="text-lg font-serif text-gray-900">
-                  {formatPrice(order.total)}
-                </p>
-                <button
-                  type="button"
-                  className="border border-gray-400 text-sm font-medium px-5 py-2 rounded-full hover:bg-white transition-colors"
-                >
-                  View details
-                </button>
-              </div>
-            </article>
-          ))}
-        </div>
+                <div className="flex items-center gap-6 shrink-0">
+                  <p className="text-lg font-serif text-gray-900">
+                    {formatPrice(order.total)}
+                  </p>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );

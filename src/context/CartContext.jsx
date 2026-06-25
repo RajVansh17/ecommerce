@@ -1,55 +1,73 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+import { useAuth } from "./AuthContext";
+import * as cartService from "../services/cart";
 
 const CartContext = createContext(null);
-const STORAGE_KEY = "techkraft-cart";
-
-const loadCart = () => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : [];
-  } catch {
-    return [];
-  }
-};
 
 export const CartProvider = ({ children }) => {
-  const [items, setItems] = useState(loadCart);
+  const { isAuthenticated, loading: authLoading } = useAuth();
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  }, [items]);
-
-  const addToCart = (product, quantity = 1) => {
-    setItems((prev) => {
-      const existing = prev.find((item) => item.id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      }
-      return [...prev, { ...product, quantity }];
-    });
-  };
-
-  const removeFromCart = (productId) => {
-    setItems((prev) => prev.filter((item) => item.id !== productId));
-  };
-
-  const updateQuantity = (productId, quantity) => {
-    if (quantity < 1) {
-      removeFromCart(productId);
+  const loadCart = useCallback(async () => {
+    if (!isAuthenticated) {
+      setItems([]);
       return;
     }
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === productId ? { ...item, quantity } : item
-      )
-    );
+
+    setLoading(true);
+    try {
+      const cartItems = await cartService.getCart();
+      setItems(cartItems);
+    } catch {
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!authLoading) {
+      loadCart();
+    }
+  }, [authLoading, loadCart]);
+
+  const requireAuth = () => {
+    if (!isAuthenticated) {
+      throw new Error("Please sign in to manage your cart");
+    }
   };
 
-  const clearCart = () => setItems([]);
+  const addToCart = async (product, quantity = 1) => {
+    requireAuth();
+    const cartItems = await cartService.addCartItem(product.id, quantity);
+    setItems(cartItems);
+  };
+
+  const removeFromCart = async (productId) => {
+    requireAuth();
+    const cartItems = await cartService.removeCartItem(productId);
+    setItems(cartItems);
+  };
+
+  const updateQuantity = async (productId, quantity) => {
+    requireAuth();
+    const cartItems = await cartService.updateCartItem(productId, quantity);
+    setItems(cartItems);
+  };
+
+  const clearCart = async () => {
+    requireAuth();
+    await cartService.clearCartApi();
+    setItems([]);
+  };
 
   const cartCount = useMemo(
     () => items.reduce((sum, item) => sum + item.quantity, 0),
@@ -65,10 +83,12 @@ export const CartProvider = ({ children }) => {
     items,
     cartCount,
     cartTotal,
+    loading,
     addToCart,
     removeFromCart,
     updateQuantity,
     clearCart,
+    refreshCart: loadCart,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

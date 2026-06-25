@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ProductCard } from "../components/ProductCard";
-import { product as products } from "../data/product.js";
+import { getProducts } from "../services/products";
 
 const SORT_OPTIONS = [
   { value: "default", label: "Featured" },
@@ -10,7 +10,17 @@ const SORT_OPTIONS = [
 ];
 
 export const Products = () => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [sort, setSort] = useState("default");
+
+  useEffect(() => {
+    getProducts()
+      .then(setProducts)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
+  }, []);
 
   const sortedProducts = useMemo(() => {
     const list = [...products];
@@ -24,11 +34,26 @@ export const Products = () => {
       default:
         return list;
     }
-  }, [sort]);
+  }, [products, sort]);
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-6 md:px-12 py-16 text-center text-gray-500">
+        Loading products...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-6 md:px-12 py-16 text-center text-red-600">
+        {error}
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-6 md:px-12 pb-8">
-      {/* Page header */}
       <section className="bg-[#f4f4f6] rounded-2xl md:rounded-3xl px-6 py-10 md:px-12 md:py-14 mb-10 md:mb-14">
         <div className="max-w-2xl space-y-4">
           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">
@@ -44,7 +69,6 @@ export const Products = () => {
         </div>
       </section>
 
-      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 md:mb-10">
         <p className="text-sm text-gray-500">
           Showing{" "}
@@ -70,7 +94,6 @@ export const Products = () => {
         </div>
       </div>
 
-      {/* Product grid */}
       <section
         aria-label="Product listing"
         className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 md:gap-8"
@@ -80,7 +103,6 @@ export const Products = () => {
         ))}
       </section>
 
-      {/* Bottom strip */}
       <section className="mt-14 md:mt-20 bg-[#f4f4f6] rounded-2xl md:rounded-3xl px-6 py-10 md:px-12 md:py-12 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
         <div className="space-y-2">
           <h2 className="text-2xl font-serif text-gray-900">

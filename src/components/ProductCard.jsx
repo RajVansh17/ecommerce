@@ -1,9 +1,14 @@
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { useCart } from "../context/CartContext";
+import { useAuth } from "../context/AuthContext";
 import { formatPrice } from "../utils/formatPrice";
 
 export const ProductCard = ({ product }) => {
   const { addToCart } = useCart();
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+  const [adding, setAdding] = useState(false);
   const {
     id,
     title = "Noise Cancelling Headphones",
@@ -12,9 +17,22 @@ export const ProductCard = ({ product }) => {
     details = "Product Details:",
   } = product || {};
 
-  const handleAddToCart = (e) => {
+  const handleAddToCart = async (e) => {
     e.preventDefault();
-    addToCart({ id, title, price, image });
+
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: "/products" } });
+      return;
+    }
+
+    setAdding(true);
+    try {
+      await addToCart({ id, title, price, image });
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setAdding(false);
+    }
   };
 
   return (
@@ -54,9 +72,10 @@ export const ProductCard = ({ product }) => {
         <button
           type="button"
           onClick={handleAddToCart}
-          className="w-fit bg-white text-black text-sm font-medium px-5 py-2 rounded-full hover:bg-gray-100 transition-colors"
+          disabled={adding}
+          className="w-fit bg-white text-black text-sm font-medium px-5 py-2 rounded-full hover:bg-gray-100 transition-colors disabled:opacity-60"
         >
-          Add to Cart
+          {adding ? "Adding..." : "Add to Cart"}
         </button>
       </div>
 
